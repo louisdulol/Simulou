@@ -112,6 +112,7 @@ export interface FilterOptions {
 const DB_STORAGE_KEY = 'simulaif_sqlite_db_v1';
 const DB_NAME = 'SimulaIF_DB';
 const STORE_NAME = 'sqlite_binary';
+const CONTENT_VERSION = '2026-09-conteudo-ete-ifpe';
 
 // @ts-ignore
 import initSqlJsAsm from 'sql.js/dist/sql-asm.js';
@@ -169,6 +170,7 @@ class SqliteService {
         }
 
         this.createSchema();
+        this.migrateContentVersion();
         this.syncQuestionsFromJSON();
         this.seedDefaultFlashcards();
         this.isInitialized = true;
@@ -274,6 +276,20 @@ class SqliteService {
     }
   }
 
+  private migrateContentVersion(): void {
+    if (!this.db) return;
+    this.db.run('CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);');
+    const res = this.db.exec("SELECT value FROM meta WHERE key = 'content_version'");
+    const current = res[0]?.values[0]?.[0] as string | undefined;
+    if (current === CONTENT_VERSION) return;
+    this.db.run('DELETE FROM questions;');
+    this.db.run('DELETE FROM question_history;');
+    this.db.run('DELETE FROM simulados;');
+    this.db.run('DELETE FROM bookmarks;');
+    this.db.run('DELETE FROM flashcards;');
+    this.db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('content_version', ?)", [CONTENT_VERSION]);
+  }
+
   private syncQuestionsFromJSON(): void {
     if (!this.db) return;
 
@@ -319,60 +335,22 @@ class SqliteService {
     if (count > 0) return;
 
     const defaultFlashcards = [
-      {
-        subject: 'Matemática',
-        topic: 'Geometria Plana',
-        front: 'Qual é o Teorema de Pitágoras e em que tipo de triângulo se aplica?',
-        back: 'Aplica-se em triângulos retângulos: a² = b² + c² (o quadrado da hipotenusa é igual à soma dos quadrados dos catetos).'
-      },
-      {
-        subject: 'Matemática',
-        topic: 'Álgebra',
-        front: 'Qual é a fórmula de Bhaskara e do discriminante (Delta)?',
-        back: 'Δ = b² - 4ac. As raízes são dadas por: x = (-b ± √Δ) / (2a).'
-      },
-      {
-        subject: 'Ciências',
-        topic: 'Eletrodinâmica',
-        front: 'Qual é a 1ª Lei de Ohm e a fórmula de potência elétrica?',
-        back: '1ª Lei de Ohm: U = R · i (Tensão = Resistência × Corrente). Potência: P = U · i = R · i².'
-      },
-      {
-        subject: 'Ciências',
-        topic: 'Cinemática',
-        front: 'Qual a fórmula da velocidade escalar média?',
-        back: 'Vm = ΔS / Δt (Variação do espaço dividida pela variação do tempo).'
-      },
-      {
-        subject: 'Ciências',
-        topic: 'Funções Inorgânicas',
-        front: 'O que caracteriza uma reação de Neutralização Total?',
-        back: 'Ácido + Base → Sal + Água. Exemplo: HCl + NaOH → NaCl + H₂O.'
-      },
-      {
-        subject: 'Língua Portuguesa',
-        topic: 'Sintaxe e Crase',
-        front: 'Quais são as três regras proibitivas fundamentais do uso da crase?',
-        back: '1) Antes de palavras masculinas; 2) Antes de verbos; 3) Antes de pronomes que não aceitam artigo (ex: ela, esta, alguém, todos).'
-      },
-      {
-        subject: 'História',
-        topic: 'Pernambuco',
-        front: 'O que foi a Revolução Pernambucana de 1817?',
-        back: 'Movimento republicano e separatista de 1817 motivado pela insatisfação contra os altos impostos da corte de D. João VI, a seca de 1816 e crise açucareira.'
-      },
-      {
-        subject: 'Geografia',
-        topic: 'Pernambuco',
-        front: 'Quais são as quatro mesorregiões geográficas de Pernambuco do litoral ao interior?',
-        back: '1) Metropolitana do Recife; 2) Zona da Mata (Mata Atlântica); 3) Agreste (faixa de transição / Planalto da Borborema); 4) Sertão (Semiárido / Caatinga).'
-      },
-      {
-        subject: 'Ciências',
-        topic: 'Citologia',
-        front: 'Qual a função da Mitocôndria e do Ribossomo?',
-        back: 'Mitocôndria: Respiração celular e síntese de ATP (energia). Ribossomo: Síntese de proteínas.'
-      }
+      { subject: 'Língua Portuguesa', topic: 'Coesão e Coerência', front: 'Qual conjunção indica oposição? E qual indica conclusão?', back: 'Oposição: mas, porém, contudo, todavia. Conclusão: portanto, logo, por isso.' },
+      { subject: 'Língua Portuguesa', topic: 'Figuras de Linguagem', front: 'Qual a diferença entre metáfora e comparação?', back: 'Comparação usa conectivo (como, feito, tal qual): "forte como um touro". Metáfora não usa: "ele é um touro".' },
+      { subject: 'Língua Portuguesa', topic: 'Regência e Crase', front: 'Quando NÃO se usa crase?', back: 'Antes de palavras masculinas, verbos e a maioria dos pronomes. Ex.: a pé, a partir, a ela.' },
+      { subject: 'Língua Portuguesa', topic: 'Fonética e Fonologia', front: 'Qual a diferença entre ditongo e hiato?', back: 'Ditongo: duas vogais na mesma sílaba (pai). Hiato: vogais em sílabas separadas (sa-í-da).' },
+      { subject: 'Matemática', topic: 'Teorema de Pitágoras', front: 'Qual é o Teorema de Pitágoras?', back: 'No triângulo retângulo: hipotenusa² = cateto² + cateto². Ex.: 3, 4 e 5.' },
+      { subject: 'Matemática', topic: 'Equações do 2º Grau', front: 'Qual é a fórmula de Bhaskara?', back: 'Δ = b² − 4ac e x = (−b ± √Δ) / 2a.' },
+      { subject: 'Matemática', topic: 'Porcentagem', front: 'Como calcular um desconto de 15% sobre R$ 80?', back: '0,15 × 80 = 12. Novo preço: 80 − 12 = R$ 68.' },
+      { subject: 'Matemática', topic: 'Produtos Notáveis', front: 'Quais são os três produtos notáveis básicos?', back: '(a+b)² = a² + 2ab + b²; (a−b)² = a² − 2ab + b²; (a+b)(a−b) = a² − b².' },
+      { subject: 'Matemática', topic: 'Áreas e Perímetros', front: 'Quais as fórmulas de área do triângulo, trapézio e círculo?', back: 'Triângulo: b·h/2. Trapézio: (B+b)·h/2. Círculo: π·r².' },
+      { subject: 'Ciências', topic: 'Ecologia', front: 'Quais são as relações ecológicas harmônicas e desarmônicas mais cobradas?', back: 'Harmônicas: mutualismo, comensalismo, sociedade, colônia. Desarmônicas: parasitismo, predação, competição.' },
+      { subject: 'Ciências', topic: 'Citologia', front: 'Qual a função da mitocôndria, do ribossomo e do cloroplasto?', back: 'Mitocôndria: respiração celular (energia). Ribossomo: síntese de proteínas. Cloroplasto: fotossíntese.' },
+      { subject: 'Ciências', topic: 'Genética', front: 'Qual o resultado do cruzamento Aa × Aa?', back: '25% AA, 50% Aa e 25% aa. Fenótipo: 3 dominantes para 1 recessivo.' },
+      { subject: 'Geografia', topic: 'Cartografia', front: 'O que são latitude e longitude?', back: 'Latitude: distância ao Equador (norte/sul). Longitude: distância ao meridiano de Greenwich (leste/oeste).' },
+      { subject: 'Geografia', topic: 'Vegetação e Biomas', front: 'Quais são os seis biomas brasileiros?', back: 'Amazônia, Cerrado, Caatinga, Mata Atlântica, Pantanal e Pampa.' },
+      { subject: 'História', topic: 'Segunda Guerra Mundial', front: 'Quem eram o Eixo e os Aliados na Segunda Guerra?', back: 'Eixo: Alemanha, Itália e Japão. Aliados: EUA, URSS, Reino Unido, França e outros.' },
+      { subject: 'História', topic: 'Brasil República', front: 'O que foi a política do café com leite?', back: 'Revezamento na presidência entre São Paulo (café) e Minas Gerais (leite), na República Oligárquica.' }
     ];
 
     const today = new Date().toISOString().split('T')[0];
@@ -1080,6 +1058,7 @@ class SqliteService {
     const SQL = await loadSqlInstance();
     this.db = new SQL.Database();
     this.createSchema();
+    this.migrateContentVersion();
     this.syncQuestionsFromJSON();
     this.seedDefaultFlashcards();
     await this.persistToIndexedDB();
