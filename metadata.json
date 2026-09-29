@@ -1,0 +1,6 @@
+{
+  "name": "Simulou - Plataforma de Simulados ETE & IFPE",
+  "description": "Sistema didático de preparação e simulados para os vestibulares integrados da ETEPE e do IFPE, com correção pós-prova, flashcards, explicações detalhadas e treino por matéria.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

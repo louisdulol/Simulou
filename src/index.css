@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+.font-graffiti {
+  font-family: 'Permanent Marker', 'Sedgwick Ave', cursive, sans-serif;
+}
